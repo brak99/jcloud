@@ -8,14 +8,10 @@ import (
 	"time"
 )
 
-type password struct {
-	Password string
-}
-
-func handlePassword(logger chan string) func(http.ResponseWriter, *http.Request) {
+func handlePassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Printf("Request received: %s", time.Now())
+		fmt.Println("Request received: ", time.Now())
 
 		const delay = 5000 * time.Millisecond
 
@@ -37,8 +33,7 @@ func handlePassword(logger chan string) func(http.ResponseWriter, *http.Request)
 
 func main() {
 
-	passwords := make(chan string)
-	handler := handlePassword(passwords)
+	handler := handlePassword()
 	http.HandleFunc("/hash", handler)
 	http.ListenAndServe(":8088", nil)
 }
