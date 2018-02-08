@@ -77,7 +77,6 @@ func TestGetPassword(t *testing.T) {
 	idStore.currentID = 2
 	idStore.ids[0] = "something"
 	idStore.ids[1] = "bob"
-	//stop := make(chan struct{})
 
 	handler := handleGetPassword()
 
@@ -85,22 +84,17 @@ func TestGetPassword(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	go func() {
-		handler(w, r)
+	handler(w, r)
 
-		resp := w.Result()
-		body, _ := ioutil.ReadAll(resp.Body)
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
 
-		fmt.Println(resp.StatusCode)
-		fmt.Println(resp.Header.Get("Content-Type"))
-		fmt.Println(string(body))
-		if string(body) != "bob" {
-			t.Fatal("response should be 'bob'")
-		}
-
-	}()
-
-	//<-stop
+	fmt.Println(resp.StatusCode)
+	fmt.Println(resp.Header.Get("Content-Type"))
+	fmt.Println(string(body))
+	if string(body) != "bob" {
+		t.Fatal("response should be 'bob'")
+	}
 
 }
 func TestInit(t *testing.T) {
