@@ -28,37 +28,46 @@ var workQueue = make(chan idJob, 100)
 func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Println("Request received: %s", time.Now())
-		fmt.Println("shutting down")
+		if r.Method == "POST" {
+			fmt.Println("Request received: %s", time.Now())
+			fmt.Println("shutting down")
 
-		signal <- struct{}{}
-		fmt.Fprintf(w, "shutdown")
+			signal <- struct{}{}
+			fmt.Fprintf(w, "shutdown")
+		} else {
+			http.NotFound(w, r)
+		}
+
 	}
 }
 
 func handlePassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		defer wg.Done()
+		if r.Method == "POST" {
+			defer wg.Done()
 
-		fmt.Printf("Request received: %s\n", time.Now())
+			fmt.Printf("Request received: %s\n", time.Now())
 
-		idStore.lock.Lock()
+			idStore.lock.Lock()
 
-		id := idStore.currentID
-		idStore.currentID++
+			id := idStore.currentID
+			idStore.currentID++
 
-		idStore.lock.Unlock()
+			idStore.lock.Unlock()
 
-		ret := fmt.Sprintf("%v", id)
-		fmt.Fprintf(w, ret)
+			ret := fmt.Sprintf("%v", id)
+			fmt.Fprintf(w, ret)
 
-		password := r.URL.Query().Get("password")
-		idJobReq := idJob{id: id, password: password}
+			password := r.URL.Query().Get("password")
+			idJobReq := idJob{id: id, password: password}
 
-		workQueue <- idJobReq
+			workQueue <- idJobReq
 
-		wg.Add(1)
+			wg.Add(1)
+		} else {
+			http.NotFound(w, r)
+		}
 
 	}
 }

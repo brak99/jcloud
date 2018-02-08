@@ -11,23 +11,27 @@ import (
 func handlePassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Println("Request received: ", time.Now())
+		if r.Method == "POST" {
+			fmt.Println("Request received: ", time.Now())
 
-		const delay = 5000 * time.Millisecond
+			const delay = 5000 * time.Millisecond
 
-		time.Sleep(delay)
+			time.Sleep(delay)
 
-		password := r.URL.Query().Get("password")
+			password := r.URL.Query().Get("password")
 
-		sha512 := sha512.New()
+			sha512 := sha512.New()
 
-		sha512.Write([]byte(password))
+			sha512.Write([]byte(password))
 
-		encoded := base64.StdEncoding.EncodeToString(sha512.Sum(nil))
+			encoded := base64.StdEncoding.EncodeToString(sha512.Sum(nil))
 
-		fmt.Printf("sha512:\t\t%s\n", encoded)
+			fmt.Printf("sha512:\t\t%s\n", encoded)
 
-		fmt.Fprintf(w, encoded)
+			fmt.Fprintf(w, encoded)
+		} else {
+			http.NotFound(w, r)
+		}
 	}
 }
 
