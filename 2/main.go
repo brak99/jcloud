@@ -23,7 +23,7 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 
 		sha512.Write([]byte(password))
 
-		encoded := base64.URLEncoding.EncodeToString(sha512.Sum(nil))
+		encoded := base64.StdEncoding.EncodeToString(sha512.Sum(nil))
 
 		fmt.Printf("sha512:\t\t%s\n", encoded)
 
