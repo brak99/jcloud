@@ -22,7 +22,7 @@ func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Reques
 			signal <- struct{}{}
 			fmt.Fprintf(w, "shutdown")
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 
 	}
@@ -54,13 +54,15 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 
 			fmt.Fprintf(w, encoded)
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 
 	}
 }
 
 func main() {
+
+	fmt.Println("Server started on port 8088")
 
 	stop := make(chan struct{})
 

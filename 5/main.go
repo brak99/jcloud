@@ -21,8 +21,9 @@ var idStore struct {
 }
 
 type idJob struct {
-	id       int
-	password string
+	id        int
+	password  string
+	canHashAt time.Time
 }
 
 var workQueue = make(chan idJob, 5000)
@@ -37,7 +38,7 @@ func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Reques
 			signal <- struct{}{}
 			fmt.Fprintf(w, "shutdown")
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -48,6 +49,8 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 		if r.Method == "POST" {
 
 			fmt.Printf("Request received: %s\n", time.Now())
+
+			availableToHashAt := time.Now().Add(5 * time.Millisecond)
 
 			idStore.lock.Lock()
 
@@ -61,14 +64,14 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 
 			//add hash job to queue to be processed
 			password := r.URL.Query().Get("password")
-			idJobReq := idJob{id: id, password: password}
+			idJobReq := idJob{id: id, password: password, canHashAt: availableToHashAt}
 
 			workQueue <- idJobReq
 
 			wg.Add(1)
 
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -86,7 +89,7 @@ func handleGetPassword() func(http.ResponseWriter, *http.Request) {
 			idInt, _ := strconv.ParseInt(id, 10, 64)
 			fmt.Fprintf(w, idStore.ids[idInt])
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -100,9 +103,12 @@ func initIDStore() {
 func storePasswordHash() {
 	select {
 	case req := <-workQueue:
-		const delay = 5000 * time.Millisecond
+		start := time.Now() // starting here instead of including the 5s wait delay
 
-		time.Sleep(delay)
+		if req.canHashAt.After(start) {
+			sleepFor := req.canHashAt.Sub(start)
+			time.Sleep(sleepFor)
+		}
 
 		sha512 := sha512.New()
 
@@ -120,6 +126,8 @@ func storePasswordHash() {
 }
 
 func main() {
+
+	fmt.Println("Server started on port 8088")
 
 	initIDStore()
 

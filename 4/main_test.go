@@ -93,11 +93,9 @@ func TestStorePasswordHash(t *testing.T) {
 
 	storePasswordHash()
 
-	//fmt.Printf(idStore.ids[0])
 
 	if idStore.ids[0] != "ZEHhWB65gUlzdVwtDQArEyx+KVLzp/aTaRaPlBzYRIFj6vjFdqEb0Q5B8zVKCZ0vKbZPZklJz0Fd7su2A+gf7Q==" {
-		//fmt.Printf("%x\n", idStore.ids[0])
-		//fmt.Printf("ZEHhWB65gUlzdVwtDQArEyx+KVLzp/aTaRaPlBzYRIFj6vjFdqEb0Q5B8zVKCZ0vKbZPZklJz0Fd7su2A+gf7Q==\n")
+
 		t.Fatal("stored password does not equal ZEHhWB65gUlzdVwtDQArEyx+KVLzp/aTaRaPlBzYRIFj6vjFdqEb0Q5B8zVKCZ0vKbZPZklJz0Fd7su2A+gf7Q==")
 	}
 }

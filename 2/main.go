@@ -30,13 +30,14 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 
 			fmt.Fprintf(w, encoded)
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
 
 func main() {
 
+	fmt.Println("Server started on port 8088")
 	handler := handlePassword()
 	http.HandleFunc("/hash", handler)
 	http.ListenAndServe(":8088", nil)

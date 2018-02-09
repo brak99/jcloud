@@ -25,6 +25,7 @@ type idJob struct {
 	id        int
 	password  string
 	timeSoFar int64
+	canHashAt time.Time
 }
 
 var stats struct {
@@ -59,7 +60,7 @@ func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Reques
 func updateStats(nanoseconds int64) {
 	stats.lock.Lock()
 	stats.total++
-	stats.totalRequestTime += nanoseconds / int64(1000)
+	stats.totalRequestTime += nanoseconds / int64(1000000)
 	stats.lock.Unlock()
 }
 
@@ -71,6 +72,7 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 			fmt.Printf("Request received: %s\n", time.Now())
 
 			start := time.Now()
+			availableToHashAt := start.Add(5000 * time.Millisecond)
 
 			idStore.lock.Lock()
 
@@ -85,14 +87,14 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 			//add hash job to queue to be processed
 			password := r.URL.Query().Get("password")
 			elapsed := time.Since(start)
-			idJobReq := idJob{id: id, password: password, timeSoFar: elapsed.Nanoseconds()}
+			idJobReq := idJob{id: id, password: password, timeSoFar: elapsed.Nanoseconds(), canHashAt: availableToHashAt}
 
 			workQueue <- idJobReq
 
 			wg.Add(1)
 
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -111,7 +113,7 @@ func handleGetPassword() func(http.ResponseWriter, *http.Request) {
 			fmt.Fprintf(w, idStore.ids[idInt])
 
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -126,6 +128,10 @@ func handleStatistics() func(http.ResponseWriter, *http.Request) {
 			average := float64(stats.totalRequestTime) / float64(stats.total)
 
 			resp := StatResponse{Total: stats.total, Average: average}
+			if stats.total == 0 {
+				resp.Total = 0
+				resp.Average = 0
+			}
 
 			js, err := json.Marshal(resp)
 			if err != nil {
@@ -137,7 +143,7 @@ func handleStatistics() func(http.ResponseWriter, *http.Request) {
 			w.Write(js)
 
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -145,7 +151,7 @@ func handleStatistics() func(http.ResponseWriter, *http.Request) {
 func initIDStore() {
 	idStore.currentID = 0
 	idStore.lock = sync.Mutex{}
-	idStore.ids = make([]string, 500)
+	idStore.ids = make([]string, 5000)
 }
 
 func initStats() {
@@ -156,11 +162,13 @@ func initStats() {
 func storePasswordHash() {
 	select {
 	case req := <-workQueue:
-		const delay = 5000 * time.Millisecond
-
-		time.Sleep(delay)
 
 		start := time.Now() // starting here instead of including the 5s wait delay
+
+		if req.canHashAt.After(start) {
+			sleepFor := req.canHashAt.Sub(start)
+			time.Sleep(sleepFor)
+		}
 
 		sha512 := sha512.New()
 
@@ -182,6 +190,8 @@ func storePasswordHash() {
 }
 
 func main() {
+
+	fmt.Println("Server started on port 8088")
 
 	initIDStore()
 	initStats()

@@ -24,6 +24,13 @@ func TestMonkey(t *testing.T) {
 	fmt.Println(resp.Header.Get("Content-Type"))
 	fmt.Println(string(body))
 
+	if resp.StatusCode != 200 {
+		t.Fatal("response should be 200, not ", resp.StatusCode)
+	}
+
+	if string(body) != "0" {
+		t.Fatal("response does not equal '0'")
+	}
 }
 
 func TestMonkey_Empty(t *testing.T) {
@@ -42,6 +49,9 @@ func TestMonkey_Empty(t *testing.T) {
 	fmt.Println(resp.Header.Get("Content-Type"))
 	fmt.Println(string(body))
 
+	if resp.StatusCode != 200 {
+		t.Fatal("response should be 200, not ", resp.StatusCode)
+	}
 }
 
 func TestShutdown(t *testing.T) {
@@ -137,8 +147,8 @@ func TestStats404(t *testing.T) {
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != 404 {
-		t.Fatal("response should be 404, not %v", resp.StatusCode)
+	if resp.StatusCode != 405 {
+		t.Fatal("response should be 405, not ", resp.StatusCode)
 	}
 
 	fmt.Println(resp.StatusCode)
@@ -189,7 +199,7 @@ func TestUpdateStats(t *testing.T) {
 	stats.total = 5
 	stats.totalRequestTime = 100
 
-	updateStats(5000)
+	updateStats(5000000)
 
 	if stats.totalRequestTime != 105 {
 		t.Fatal("totalRequestTime should be 105")

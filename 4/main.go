@@ -35,7 +35,7 @@ func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Reques
 			signal <- struct{}{}
 			fmt.Fprintf(w, "shutdown")
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 
 	}
@@ -65,7 +65,7 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 
 			wg.Add(1)
 		} else {
-			http.NotFound(w, r)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 
 	}
@@ -100,6 +100,8 @@ func storePasswordHash() {
 }
 
 func main() {
+
+	fmt.Println("Server started on port 8088")
 
 	initIDStore()
 
