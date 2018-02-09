@@ -16,7 +16,7 @@ If this were a real service there are things I would do different.  However in t
 
 - The idStore is "ok" for an example.  A real data store would be much better instead of the simple and limited one here.
 - The stats could be better.  When in a production environment, more stats the better for monitoring.  There are better stat packages out there that do a great job of monitoring and alerting.
-- The workQueue while adequate could be better.
-- There's no security on any of these endpoints.
+- The workQueue while adequate but could be better.
+- There's no security on any of these endpoints.  Especially the shutdown one.  
 - Since we are talking passwords, encryption should be used.
 - Etc
