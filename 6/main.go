@@ -22,8 +22,9 @@ var idStore struct {
 }
 
 type idJob struct {
-	id       int
-	password string
+	id        int
+	password  string
+	timeSoFar int64
 }
 
 var stats struct {
@@ -38,7 +39,7 @@ type StatResponse struct {
 	Average float64
 }
 
-var workQueue = make(chan idJob, 100)
+var workQueue = make(chan idJob, 5000)
 
 func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -66,11 +67,10 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "POST" {
-			start := time.Now()
-
-			defer wg.Done()
 
 			fmt.Printf("Request received: %s\n", time.Now())
+
+			start := time.Now()
 
 			idStore.lock.Lock()
 
@@ -82,16 +82,14 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 			ret := fmt.Sprintf("%v", id)
 			fmt.Fprintf(w, ret)
 
+			//add hash job to queue to be processed
 			password := r.URL.Query().Get("password")
-			idJobReq := idJob{id: id, password: password}
+			elapsed := time.Since(start)
+			idJobReq := idJob{id: id, password: password, timeSoFar: elapsed.Nanoseconds()}
 
 			workQueue <- idJobReq
 
 			wg.Add(1)
-
-			elapsed := time.Since(start)
-
-			updateStats(elapsed.Nanoseconds())
 
 		} else {
 			http.NotFound(w, r)
@@ -103,17 +101,14 @@ func handleGetPassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "GET" {
-			start := time.Now()
+			fmt.Printf("Request received: %s\n", time.Now())
 
+			//extract the id from the url
 			id := strings.TrimPrefix(r.URL.Path, "/hash/")
 			fmt.Printf("%v\n", id)
 
 			idInt, _ := strconv.ParseInt(id, 10, 64)
 			fmt.Fprintf(w, idStore.ids[idInt])
-
-			elapsed := time.Since(start)
-
-			updateStats(elapsed.Nanoseconds())
 
 		} else {
 			http.NotFound(w, r)
@@ -125,6 +120,9 @@ func handleStatistics() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "GET" {
+
+			fmt.Printf("Request received: %s\n", time.Now())
+
 			average := float64(stats.totalRequestTime) / float64(stats.total)
 
 			resp := StatResponse{Total: stats.total, Average: average}
@@ -162,6 +160,8 @@ func storePasswordHash() {
 
 		time.Sleep(delay)
 
+		start := time.Now() // starting here instead of including the 5s wait delay
+
 		sha512 := sha512.New()
 
 		sha512.Write([]byte(req.password))
@@ -172,6 +172,12 @@ func storePasswordHash() {
 		fmt.Printf("sha512:\t\t%s\n", encoded)
 
 		idStore.ids[req.id] = encoded
+
+		wg.Done()
+
+		elapsed := time.Since(start)
+
+		updateStats(req.timeSoFar + elapsed.Nanoseconds())
 	}
 }
 
@@ -205,7 +211,9 @@ func main() {
 	}()
 
 	<-stop
-	wg.Wait()
 
 	server.Shutdown(context.Background())
+
+	//wait for all the hashes to be saved (if we had a backing store like Redis or something)
+	wg.Wait()
 }

@@ -23,7 +23,7 @@ type idJob struct {
 	password string
 }
 
-var workQueue = make(chan idJob, 100)
+var workQueue = make(chan idJob, 5000)
 
 func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,6 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "POST" {
-			defer wg.Done()
 
 			fmt.Printf("Request received: %s\n", time.Now())
 
@@ -95,6 +94,8 @@ func storePasswordHash() {
 		fmt.Printf("sha512:\t\t%s\n", encoded)
 
 		idStore.ids[req.id] = encoded
+
+		wg.Done()
 	}
 }
 
@@ -123,7 +124,10 @@ func main() {
 	}()
 
 	<-stop
-	wg.Wait()
 
 	server.Shutdown(context.Background())
+
+	//wait for all the hashes to be saved (if we had a backing store like Redis or something)
+	wg.Wait()
+
 }

@@ -10,9 +10,7 @@ import (
 
 func TestMonkey(t *testing.T) {
 
-	passwords := make(chan string)
-
-	handler := handlePassword(passwords)
+	handler := handlePassword()
 
 	r, _ := http.NewRequest("POST", "http://localhost:8088/?password=angryMonkey", nil)
 
@@ -30,9 +28,7 @@ func TestMonkey(t *testing.T) {
 
 func TestMonkey_Empty(t *testing.T) {
 
-	passwords := make(chan string)
-
-	handler := handlePassword(passwords)
+	handler := handlePassword()
 
 	r, _ := http.NewRequest("POST", "http://localhost:8088/?password=", nil)
 
@@ -50,9 +46,7 @@ func TestMonkey_Empty(t *testing.T) {
 
 func TestMonkey_WrongEndpoint(t *testing.T) {
 
-	passwords := make(chan string)
-
-	handler := handlePassword(passwords)
+	handler := handlePassword()
 
 	r, _ := http.NewRequest("POST", "http://localhost:8088/?nope=whatever", nil)
 

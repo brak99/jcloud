@@ -25,7 +25,7 @@ type idJob struct {
 	password string
 }
 
-var workQueue = make(chan idJob, 100)
+var workQueue = make(chan idJob, 5000)
 
 func handleShutdown(signal chan struct{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +46,6 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "POST" {
-			defer wg.Done()
 
 			fmt.Printf("Request received: %s\n", time.Now())
 
@@ -60,6 +59,7 @@ func handlePassword() func(http.ResponseWriter, *http.Request) {
 			ret := fmt.Sprintf("%v", id)
 			fmt.Fprintf(w, ret)
 
+			//add hash job to queue to be processed
 			password := r.URL.Query().Get("password")
 			idJobReq := idJob{id: id, password: password}
 
@@ -77,6 +77,9 @@ func handleGetPassword() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "GET" {
+			fmt.Printf("Request received: %s\n", time.Now())
+
+			//extract the id from the url
 			id := strings.TrimPrefix(r.URL.Path, "/hash/")
 			fmt.Printf("%v\n", id)
 
@@ -111,6 +114,8 @@ func storePasswordHash() {
 		fmt.Printf("sha512:\t\t%s\n", encoded)
 
 		idStore.ids[req.id] = encoded
+
+		wg.Done()
 	}
 }
 
@@ -141,7 +146,10 @@ func main() {
 	}()
 
 	<-stop
-	wg.Wait()
 
 	server.Shutdown(context.Background())
+
+	//wait for all the hashes to be saved (if we had a backing store like Redis or something)
+	wg.Wait()
+
 }
